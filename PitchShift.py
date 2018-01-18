@@ -1,13 +1,13 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 import pyaudio
-# import wave
+import wave
 #import fcntl
 #import termios
 import time
 import sys
 import os
-# import struct
+import struct
 import numpy as np
 from scipy import *
 
@@ -15,7 +15,10 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1        #モノラル
 RATE = 44100        #サンプルレート
 CHUNK = 2**10       #データ点数
-RECORD_SECONDS = 20 #録音する時間の長さ
+RECORD_SECONDS = 5 #録音する時間の長さ
+RECORD_NUM = RECORD_SECONDS * RATE // CHUNK * 2
+OFFSET = 0
+# OFFSET = 0.1e-308
 
 
 KEY_CODE_ENTER = 10
@@ -77,14 +80,15 @@ def stretch(sound_array, f, window_size, h):
     for i in np.arange(0, len(sound_array) - window_size - h, h*f):
         #two potentially overlapping subarrays
         i1 = int(i)
-        a1 = np.nan_to_num(sound_array[i1:i1+window_size])
-        a2 = np.nan_to_num(sound_array[i1+h:i1+window_size+h])
+        a1 = np.nan_to_num(sound_array[i1:i1+window_size]) + OFFSET
+        a2 = np.nan_to_num(sound_array[i1+h:i1+window_size+h]) + OFFSET
 
         #resynchronize the second array on the first
-        s1 = np.nan_to_num(np.fft.fft(hanning_window * a1)) + 0.0001
-        s2 = np.nan_to_num(np.fft.fft(hanning_window * a2)) + 0.0001
+        s1 = np.nan_to_num(np.fft.fft(hanning_window * a1))
+        s2 = np.nan_to_num(np.fft.fft(hanning_window * a2))
         #print(a1, s1, a2, s2)
-        phase = (phase + np.angle(s2/s1)) % 2 * np.pi
+        phase = (phase + np.angle(s2) - np.angle(s1)) % 2 * np.pi        
+        # phase = (phase + np.angle(s2/s1)) % 2 * np.pi
         a2_rephased = np.fft.ifft(np.abs(s2) * np.exp(1j*phase))
 
         #add to result
@@ -104,21 +108,25 @@ def pitchshift(snd_array, n, window_size=2**13, h=2**11):
 
 def realtimeVoiceChanger():
     audioStream = AudioStream()
-    startTime = time.clock()
+    startTime = time.time()
     rec = []
     a = 0
-    text = input("Press [ENTER] to start\nPress any other key to stop")
+    i = 0 # record i times
+    text = input("Press [ENTER] to start")
     if text == "":
-        while time.clock() - startTime < RECORD_SECONDS:
+        # while time.time() - startTime < RECORD_SECONDS:
+        while i < RECORD_NUM:
             inputAudio = audioStream.input()
             rec = audioStream.record(inputAudio)
-            if (a == 0): print(np.nan_to_num(np.frombuffer(rec[0])))
-            a += 1
+            # if (a == 0): print(np.nan_to_num(np.frombuffer(rec[0])))
+            # a += 1
+            i += 1
         #print(b''.join(rec))
         data = np.nan_to_num(np.frombuffer(b''.join(rec), dtype="int16"))
         print(len(data))
         audioStream.output(data)
-        data = pitchshift(data, 1.5)
+        dPitch = float(input("Enter the number of semitones to shift by: "))
+        data = pitchshift(data, dPitch)
         print(len(data))
         text = input("Press [ENTER] to listen")
         if text == "":
