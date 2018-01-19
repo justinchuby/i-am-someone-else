@@ -8,6 +8,7 @@ import time
 import sys
 import os
 import struct
+import keyboard
 import numpy as np
 from scipy import *
 
@@ -106,28 +107,40 @@ def pitchshift(snd_array, n, window_size=2**13, h=2**11):
     stretched = stretch(snd_array, 1.0/factor, window_size, h)
     return speedx(stretched[window_size:], factor)
 
+def amplify(data, factor):
+    # h = [factor]
+    # ampData = np.convolve(data, h, 'same')
+    # print(ampData == data)
+    ampData = np.multiply(data, factor)
+    return ampData
+
 def realtimeVoiceChanger():
     audioStream = AudioStream()
     startTime = time.time()
     rec = []
     a = 0
     i = 0 # record i times
-    text = input("Press [ENTER] to start")
+    # text = input("Press [ENTER] to start")
+    print("Press [ENTER] to start")
+    keyboard.wait('enter')
     if text == "":
         # while time.time() - startTime < RECORD_SECONDS:
-        while i < RECORD_NUM:
+        while text != "s":
             inputAudio = audioStream.input()
             rec = audioStream.record(inputAudio)
             # if (a == 0): print(np.nan_to_num(np.frombuffer(rec[0])))
             # a += 1
             i += 1
+            text = input("Press [s] to stop")
         #print(b''.join(rec))
         data = np.nan_to_num(np.frombuffer(b''.join(rec), dtype="int16"))
         print(len(data))
         audioStream.output(data)
+        # data = amplify(data, 1)
+        # audioStream.output(data)
         dPitch = float(input("Enter the number of semitones to shift by: "))
         data = pitchshift(data, dPitch)
-        print(len(data))
+        # print(len(data))
         text = input("Press [ENTER] to listen")
         if text == "":
             print("Outputting...")
