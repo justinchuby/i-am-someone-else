@@ -17,9 +17,10 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1        #モノラル
 RATE = 44100        #サンプルレート
 CHUNK = 2**10       #データ点数
-RECORD_SECONDS = 5  #録音する時間の長さ
-RECORD_NUM = RECORD_SECONDS * RATE // CHUNK * 2
-REC_PER_SEC = RATE // CHUNK * 2
+# RECORD_SECONDS = 5  #録音する時間の長さ
+# RECORD_NUM = RECORD_SECONDS * RATE // CHUNK * 2
+# REC_PER_SEC = RATE // CHUNK * 2
+AMP_FACTOR = 2
 OFFSET = 0
 # OFFSET = 0.1e-308
 
@@ -159,7 +160,7 @@ def realtimeVoiceChanger():
     # Pitch shift
     data = pitchshift(data, dPitch)
     # amplify
-    data = amplify(data, 2)
+    data = amplify(data, AMP_FACTOR)
 
     # print(len(data))
     # text = input("Press [ENTER] to listen")
