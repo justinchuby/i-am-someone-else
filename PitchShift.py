@@ -10,12 +10,13 @@ import os
 import struct
 import numpy as np
 from scipy import *
+from NoiseReduct import butter_bandpass_filter
 
 FORMAT = pyaudio.paInt16
 CHANNELS = 1        #モノラル
 RATE = 44100        #サンプルレート
 CHUNK = 2**10       #データ点数
-RECORD_SECONDS = 5 #録音する時間の長さ
+RECORD_SECONDS = 5  #録音する時間の長さ
 RECORD_NUM = RECORD_SECONDS * RATE // CHUNK * 2
 OFFSET = 0
 # OFFSET = 0.1e-308
@@ -23,7 +24,7 @@ OFFSET = 0
 
 KEY_CODE_ENTER = 10
 
-class  AudioStream:
+class AudioStream:
     def __init__(self):
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(
@@ -59,7 +60,7 @@ def resampling(frames):
     data = int16(data).tostring()
     return data
 
-def changePlaySpeed(inp,rate):
+def changePlaySpeed(inp, rate):
     outp = []
     for i in range(int(len(inp) / rate)):
         outp.append(inp[int(i * float(rate))])
@@ -106,6 +107,10 @@ def pitchshift(snd_array, n, window_size=2**13, h=2**11):
     stretched = stretch(snd_array, 1.0/factor, window_size, h)
     return speedx(stretched[window_size:], factor)
 
+
+def reduceNoise(sound_array):
+    print(sound_array)
+
 def realtimeVoiceChanger():
     audioStream = AudioStream()
     startTime = time.time()
@@ -126,7 +131,12 @@ def realtimeVoiceChanger():
         print(len(data))
         audioStream.output(data)
         dPitch = float(input("Enter the number of semitones to shift by: "))
+
+        # Noise reduction
+        data = butter_bandpass_filter(data, 80, 8000, RATE, order=5)
+        # Pitch shift
         data = pitchshift(data, dPitch)
+
         print(len(data))
         text = input("Press [ENTER] to listen")
         if text == "":
